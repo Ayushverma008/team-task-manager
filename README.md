@@ -38,13 +38,15 @@ A full-stack collaborative task management web application built with Node.js, E
 │   ├── models/         (User, Project, Task)
 │   ├── routes/         (auth, projects, tasks)
 │   ├── server.js
-│   └── .env.example
-└── frontend/
-    ├── index.html      (Login / Signup)
-    ├── dashboard.html  (Overview + Charts)
-    ├── project.html    (Kanban Board)
-    ├── css/style.css
-    └── js/             (api, ui, auth, dashboard, project)
+│   └── .env
+├── frontend/
+│   ├── index.html      (Login / Signup)
+│   ├── dashboard.html  (Overview + Charts)
+│   ├── project.html    (Kanban Board)
+│   ├── css/style.css
+│   └── js/             (api, ui, auth, dashboard, project)
+├── package.json        (Root configuration for Railway deployments)
+└── .gitignore          
 ```
 
 ---
@@ -52,8 +54,8 @@ A full-stack collaborative task management web application built with Node.js, E
 ## Local Setup
 
 ### Prerequisites
-- Node.js v18+
-- MongoDB (local or [MongoDB Atlas](https://cloud.mongodb.com))
+- Node.js v20+
+- MongoDB Atlas cluster URL
 
 ### 1. Clone the repo
 ```bash
@@ -61,26 +63,21 @@ git clone <your-repo-url>
 cd Ethera
 ```
 
-### 2. Install backend dependencies
-```bash
-cd backend
-npm install
-```
-
-### 3. Configure environment variables
-```bash
-cp .env.example .env
-```
-Edit `.env`:
-```
+### 2. Configure Environment Variables
+Inside the `backend/` folder, ensure your `.env` file looks like this:
+```env
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/taskmanager
+# IMPORTANT: Use the legacy long-form MongoDB connection string to bypass local DNS SRV errors
+MONGO_URI=mongodb://<your-username>:<your-password>@ac-xxxxxxxx.mongodb.net:27017,ac-xxxxxxxx.mongodb.net:27017/taskmanager?ssl=true&replicaSet=atlas-xxx-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Ethara
 JWT_SECRET=your_super_secret_key
 ```
 
-### 4. Start the development server
+### 3. Install and run from the ROOT folder
+Because we added a `package.json` to the root folder, you can simply run your project entirely from the `C:\Ethera` root folder!
+
 ```bash
-node server.js
+npm install
+npm start
 ```
 
 Open **http://localhost:5000** in your browser.
@@ -88,6 +85,8 @@ Open **http://localhost:5000** in your browser.
 ---
 
 ## Deployment on Railway
+
+Deploying to Railway is incredibly fast. We've equipped the codebase with a root `package.json` which Railway automatically detects. No manual settings required!
 
 ### 1. Push to GitHub
 ```bash
@@ -100,25 +99,18 @@ git push -u origin main
 
 ### 2. Create Railway Project
 - Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub**
-- Select your repository
+- Select your repository. Railway automatically detects Node 20!
 
-### 3. Add MongoDB
-- In Railway dashboard → **+ New** → **Database** → **MongoDB**
-- Copy the `MONGO_PUBLIC_URL` connection string
-
-### 4. Set Environment Variables
-In Railway → your service → **Variables**:
+### 3. Set Environment Variables
+In Railway → your new service → **Variables**, you must add:
 ```
 PORT=5000
-MONGO_URI=<your-railway-mongodb-url>
+MONGO_URI=<your-mongodb-atlas-url>
 JWT_SECRET=<a-strong-random-secret>
 ```
 
-### 5. Set the Root Directory
-In Railway → **Settings** → **Root Directory** → set to `backend`
-
-### 6. Deploy
-Railway will auto-deploy. Your app will be live at `https://<your-app>.railway.app`
+### 4. Deploy
+Railway will automatically deploy your code using `npm install` and `npm start`. Your app will instantly be live at `https://<your-app>.up.railway.app`!
 
 ---
 
