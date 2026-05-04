@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskFlow – Login</title>
+  <meta name="description" content="Sign in to TaskFlow – the collaborative team task manager."/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">⚡ TaskFlow</div>
+      <p class="auth-subtitle">Team Task Management, Simplified</p>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required/>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" id="login-btn">
+          <i class="fa fa-arrow-right-to-bracket"></i> Sign In
+        </button>
+        <p class="text-sm text-muted" style="text-align:center">
+          Don't have an account?
+          <a href="#" onclick="switchTab('signup')" style="color:var(--accent-light)">Sign up</a>
+        </p>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" class="auth-form hidden" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="signup-name" class="form-input" placeholder="John Doe" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span class="text-muted">(min 6 chars)</span></label>
+          <input type="password" id="signup-password" class="form-input" placeholder="••••••••" required minlength="6"/>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+          <i class="fa fa-user-plus"></i> Create Account
+        </button>
+        <p class="text-sm text-muted" style="text-align:center">
+          Already have an account?
+          <a href="#" onclick="switchTab('login')" style="color:var(--accent-light)">Sign in</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
