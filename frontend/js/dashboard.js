@@ -62,22 +62,45 @@
       return;
     }
     grid.innerHTML = allProjects.map(p => {
-      const isAdmin = p.admin._id === user._id || p.admin === user._id;
+      const pAdminId = p.admin?._id || p.admin;
+      const isProjAdmin = pAdminId === user?._id;
+      const isGlobalAdmin = user?.role === 'admin';
+      const canManage = isProjAdmin || isGlobalAdmin;
       const members = p.members || [];
       const avatarHtml = members.slice(0, 4).map(m =>
         `<div class="member-avatar" title="${esc(m.user?.name || '')}">${getInitials(m.user?.name || '?')}</div>`
       ).join('') + (members.length > 4 ? `<div class="member-avatar" title="More">+${members.length - 4}</div>` : '');
       return `
       <div class="project-card" onclick="window.location.href='project.html?id=${p._id}'">
-        <div class="project-card-title">${esc(p.title)}</div>
+        <div class="flex justify-between items-center" style="margin-bottom:8px">
+          <div class="project-card-title" style="margin-bottom:0">${esc(p.title)}</div>
+          ${canManage ? `
+            <button class="task-btn delete-btn" onclick="deleteProject(event, '${p._id}', '${esc(p.title)}')" title="Delete Project">
+              <i class="fa fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
         <div class="project-card-desc">${esc(p.description) || '<em style="opacity:.4">No description</em>'}</div>
         <div class="project-card-meta">
           <div class="member-avatars">${avatarHtml}</div>
-          <span class="project-role-badge ${isAdmin ? 'admin' : 'member'}">${isAdmin ? 'Admin' : 'Member'}</span>
+          <span class="project-role-badge ${isProjAdmin ? 'admin' : 'member'}">${isProjAdmin ? 'Admin' : 'Member'}</span>
         </div>
       </div>`;
     }).join('');
   }
+
+  async function deleteProject(e, id, title) {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete project "${title}"? This will also delete all its tasks.`)) return;
+    try {
+      await api.deleteProject(id);
+      showToast('Project deleted successfully', 'success');
+      await loadProjects();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+  window.deleteProject = deleteProject;
 
   // ---- Aggregate stats across all projects ----
   async function loadAggregateStats() {

@@ -3,15 +3,18 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
+const tasksRouter = require('./tasks');
 
-// Helper: check if user is admin of project
-const isAdmin = (project, userId) =>
-  project.admin.toString() === userId.toString();
+router.use('/:id/tasks', tasksRouter);
+
+// Helper: check if user is admin of project or global admin
+const isAdmin = (project, user) =>
+  user.role === 'admin' || project.admin.toString() === user._id.toString();
 
 // Helper: check if user is a member (or admin) of project
-const isMember = (project, userId) => {
-  if (isAdmin(project, userId)) return true;
-  return project.members.some((m) => m.user.toString() === userId.toString());
+const isMember = (project, user) => {
+  if (isAdmin(project, user)) return true;
+  return project.members.some((m) => m.user.toString() === user._id.toString());
 };
 
 // @route POST /api/projects
@@ -34,12 +37,13 @@ router.post('/', protect, async (req, res) => {
 // @route GET /api/projects
 router.get('/', protect, async (req, res) => {
   try {
-    const projects = await Project.find({
+    const filter = req.user.role === 'admin' ? {} : {
       $or: [
         { admin: req.user._id },
         { 'members.user': req.user._id },
       ],
-    })
+    };
+    const projects = await Project.find(filter)
       .populate('admin', 'name email')
       .populate('members.user', 'name email')
       .sort({ createdAt: -1 });
@@ -56,7 +60,7 @@ router.get('/:id', protect, async (req, res) => {
       .populate('admin', 'name email')
       .populate('members.user', 'name email');
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isMember(project, req.user._id))
+    if (!isMember(project, req.user))
       return res.status(403).json({ message: 'Access denied' });
     res.json(project);
   } catch (err) {
@@ -71,7 +75,7 @@ router.post('/:id/members', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isAdmin(project, req.user._id))
+    if (!isAdmin(project, req.user))
       return res.status(403).json({ message: 'Only admin can add members' });
 
     const User = require('../models/User');
@@ -97,7 +101,7 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isAdmin(project, req.user._id))
+    if (!isAdmin(project, req.user))
       return res.status(403).json({ message: 'Only admin can remove members' });
     if (req.params.userId === project.admin.toString())
       return res.status(400).json({ message: 'Cannot remove admin' });
@@ -112,12 +116,36 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
   }
 });
 
+// @route PATCH /api/projects/:id/members/:userId (admin only)
+router.patch('/:id/members/:userId', protect, async (req, res) => {
+  const { role } = req.body;
+  if (!role) return res.status(400).json({ message: 'Role is required' });
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    if (!isAdmin(project, req.user))
+      return res.status(403).json({ message: 'Only admin can edit members' });
+
+    const member = project.members.find(
+      (m) => m.user.toString() === req.params.userId
+    );
+    if (!member) return res.status(404).json({ message: 'Member not found' });
+
+    member.role = role;
+    await project.save();
+    await project.populate('members.user', 'name email');
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // @route GET /api/projects/:id/dashboard
 router.get('/:id/dashboard', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id).populate('members.user', 'name email');
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isMember(project, req.user._id))
+    if (!isMember(project, req.user))
       return res.status(403).json({ message: 'Access denied' });
 
     const tasks = await Task.find({ project: req.params.id }).populate('assignee', 'name');
@@ -144,6 +172,22 @@ router.get('/:id/dashboard', protect, async (req, res) => {
     }
 
     res.json({ stats, perUser: Object.values(perUser), tasks });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// @route DELETE /api/projects/:id (admin only)
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    if (!isAdmin(project, req.user))
+      return res.status(403).json({ message: 'Only admin can delete project' });
+
+    await Task.deleteMany({ project: req.params.id });
+    await project.deleteOne();
+    res.json({ message: 'Project deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

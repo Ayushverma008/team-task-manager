@@ -49,12 +49,12 @@ function isOverdue(dateStr) {
 function logout() {
   localStorage.removeItem('tf_token');
   localStorage.removeItem('tf_user');
-  window.location.href = 'index.html';
+  window.location.href = 'auth.html';
 }
 
 function requireAuth() {
   const token = localStorage.getItem('tf_token');
-  if (!token) { window.location.href = 'index.html'; return null; }
+  if (!token) { window.location.href = 'auth.html'; return null; }
   const user = JSON.parse(localStorage.getItem('tf_user') || 'null');
   return user;
 }

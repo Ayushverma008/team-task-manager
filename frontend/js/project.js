@@ -21,7 +21,8 @@
   async function loadProject() {
     try {
       project = await api.getProject(projectId);
-      isAdminUser = project.admin._id === user._id || project.admin === user._id;
+      const pAdminId = project.admin?._id || project.admin;
+      isAdminUser = pAdminId === user?._id || user?.role === 'admin';
 
       document.getElementById('project-title-heading').textContent = project.title;
       document.getElementById('project-desc-heading').textContent  = project.description || '';
@@ -39,6 +40,9 @@
       populateAssigneeSelect();
     } catch (err) {
       showToast(err.message, 'error');
+      if (err.status === 404 || err.status === 403) {
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+      }
     }
   }
 
@@ -199,6 +203,17 @@
     }
   };
 
+  window.handleDeleteProject = async () => {
+    if (!confirm(`Are you sure you want to delete project "${project.title}"? This will also delete all its tasks.`)) return;
+    try {
+      await api.deleteProject(projectId);
+      showToast('Project deleted successfully', 'success');
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
   window.handleDeleteTask = async (taskId) => {
     if (!confirm('Delete this task? This cannot be undone.')) return;
     try {
@@ -222,7 +237,8 @@
     }
     container.innerHTML = members.map(m => {
       const mu = m.user || {};
-      const canRemove = isAdminUser && mu._id !== (project.admin._id || project.admin);
+      const pAdminId = project.admin?._id || project.admin;
+      const canRemove = isAdminUser && mu._id !== pAdminId;
       return `
       <div class="member-row">
         <div class="avatar" style="width:30px;height:30px;font-size:0.7rem;flex-shrink:0">${getInitials(mu.name || '?')}</div>
@@ -232,7 +248,12 @@
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span class="member-role-pill ${m.role}">${m.role}</span>
-          ${canRemove ? `<button class="task-btn delete-btn" onclick="handleRemoveMember('${mu._id}')" title="Remove"><i class="fa fa-xmark"></i></button>` : ''}
+          ${isAdminUser ? `
+            <button class="task-btn" onclick="openEditMember('${mu._id}')" title="Edit Member"><i class="fa fa-pencil"></i></button>
+            ${mu._id !== (project.admin._id || project.admin) ? `
+              <button class="task-btn delete-btn" onclick="handleRemoveMember('${mu._id}')" title="Remove"><i class="fa fa-xmark"></i></button>
+            ` : ''}
+          ` : ''}
         </div>
       </div>`;
     }).join('');
@@ -264,6 +285,41 @@
       showToast(err.message, 'error');
     } finally {
       setLoading('add-member-btn-submit', false, '<i class="fa fa-plus"></i> Add Member');
+    }
+  };
+
+  window.openEditMember = (memberId) => {
+    const m = project.members.find(m => (m.user?._id || m.user) === memberId);
+    if (!m) return;
+    document.getElementById('edit-member-id').value = memberId;
+    document.getElementById('edit-member-name').value = m.user.name || '';
+    document.getElementById('edit-member-role').value = m.role;
+    openModal('edit-member-modal');
+  };
+
+  window.handleUpdateMember = async (e) => {
+    e.preventDefault();
+    const memberId = document.getElementById('edit-member-id').value;
+    const name = document.getElementById('edit-member-name').value.trim();
+    const role = document.getElementById('edit-member-role').value;
+    setLoading('edit-member-btn-submit', true, '<i class="fa fa-floppy-disk"></i> Updating...');
+    try {
+      // Update name globally if changed
+      const m = project.members.find(m => (m.user?._id || m.user) === memberId);
+      if (name && name !== m.user?.name) {
+        await api.updateUser(memberId, { name });
+      }
+      // Update role in project
+      await api.updateMemberRole(projectId, memberId, { role });
+      
+      closeModal('edit-member-modal');
+      showToast('Member updated!', 'success');
+      await loadProject();
+      await loadTasks();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoading('edit-member-btn-submit', false, '<i class="fa fa-floppy-disk"></i> Update Member');
     }
   };
 

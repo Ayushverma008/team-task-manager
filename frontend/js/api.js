@@ -18,7 +18,9 @@ async function apiFetch(path, options = {}) {
 
   if (!res.ok) {
     const msg = data.message || data.errors?.[0]?.msg || 'Something went wrong';
-    throw new Error(msg);
+    const error = new Error(msg);
+    error.status = res.status;
+    throw error;
   }
   return data;
 }
@@ -34,12 +36,17 @@ const api = {
   getProjects:   ()        => apiFetch('/api/projects'),
   getProject:    (id)      => apiFetch(`/api/projects/${id}`),
   addMember:     (id, body) => apiFetch(`/api/projects/${id}/members`, { method: 'POST', body: JSON.stringify(body) }),
+  updateMemberRole: (id, uid, body) => apiFetch(`/api/projects/${id}/members/${uid}`, { method: 'PATCH', body: JSON.stringify(body) }),
   removeMember:  (id, uid) => apiFetch(`/api/projects/${id}/members/${uid}`, { method: 'DELETE' }),
   getDashboard:  (id)      => apiFetch(`/api/projects/${id}/dashboard`),
+  deleteProject: (id)      => apiFetch(`/api/projects/${id}`, { method: 'DELETE' }),
 
   // Tasks
   getTasks:    (projId)       => apiFetch(`/api/projects/${projId}/tasks`),
   createTask:  (projId, body) => apiFetch(`/api/projects/${projId}/tasks`, { method: 'POST', body: JSON.stringify(body) }),
   updateTask:  (taskId, body) => apiFetch(`/api/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteTask:  (taskId)       => apiFetch(`/api/tasks/${taskId}`, { method: 'DELETE' }),
+
+  // Users
+  updateUser:  (id, body)     => apiFetch(`/api/auth/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 };

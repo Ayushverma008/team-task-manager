@@ -18,7 +18,6 @@ app.use(express.json());
 // --- API Routes ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
-app.use('/api/projects/:id/tasks', require('./routes/tasks'));
 app.use('/api/tasks', require('./routes/tasks'));
 
 // --- Serve Frontend in production ---

@@ -4,12 +4,12 @@ const { protect } = require('../middleware/auth');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 
-const isAdmin = (project, userId) =>
-  project.admin.toString() === userId.toString();
+const isAdmin = (project, user) =>
+  user.role === 'admin' || project.admin.toString() === user._id.toString();
 
-const isMember = (project, userId) => {
-  if (isAdmin(project, userId)) return true;
-  return project.members.some((m) => m.user.toString() === userId.toString());
+const isMember = (project, user) => {
+  if (isAdmin(project, user)) return true;
+  return project.members.some((m) => m.user.toString() === user._id.toString());
 };
 
 // @route GET /api/projects/:id/tasks
@@ -17,7 +17,7 @@ router.get('/', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isMember(project, req.user._id))
+    if (!isMember(project, req.user))
       return res.status(403).json({ message: 'Access denied' });
 
     const tasks = await Task.find({ project: req.params.id })
@@ -36,7 +36,7 @@ router.post('/', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: 'Project not found' });
-    if (!isAdmin(project, req.user._id))
+    if (!isAdmin(project, req.user))
       return res.status(403).json({ message: 'Only admin can create tasks' });
 
     const task = await Task.create({
@@ -62,10 +62,10 @@ router.patch('/:taskId', protect, async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     const project = task.project;
-    if (!isMember(project, req.user._id))
+    if (!isMember(project, req.user))
       return res.status(403).json({ message: 'Access denied' });
 
-    const adminUser = isAdmin(project, req.user._id);
+    const adminUser = isAdmin(project, req.user);
 
     // Members can only update status
     if (!adminUser) {
@@ -101,7 +101,7 @@ router.delete('/:taskId', protect, async (req, res) => {
     const task = await Task.findById(req.params.taskId).populate('project');
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    if (!isAdmin(task.project, req.user._id))
+    if (!isAdmin(task.project, req.user))
       return res.status(403).json({ message: 'Only admin can delete tasks' });
 
     await task.deleteOne();

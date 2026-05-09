@@ -3,71 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TaskFlow – Login</title>
-  <meta name="description" content="Sign in to TaskFlow – the collaborative team task manager."/>
+  <title>TaskFlow – Streamline Your Team's Productivity</title>
+  <meta name="description" content="The modern, collaborative task management platform for teams who want to get things done."/>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    .landing-nav {
+      height: 80px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 5%; max-width: 1400px; margin: 0 auto;
+    }
+    .hero {
+      padding: 100px 5% 140px; text-align: center;
+      background: radial-gradient(circle at 50% -20%, rgba(15,23,42,0.03) 0%, transparent 70%);
+      max-width: 1200px; margin: 0 auto;
+    }
+    .hero-tag {
+      display: inline-block; padding: 6px 14px; border-radius: 99px;
+      background: var(--accent-dim); color: var(--accent);
+      font-size: 0.85rem; font-weight: 700; margin-bottom: 24px;
+    }
+    .hero-h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -2px;
+      line-height: 1.1; margin-bottom: 24px; color: var(--accent);
+    }
+    .hero-p {
+      font-size: 1.25rem; color: var(--text-secondary); max-width: 640px;
+      margin: 0 auto 40px; line-height: 1.6;
+    }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; }
+    
+    .features { padding: 100px 5%; background: var(--bg-surface); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px; max-width: 1200px; margin: 48px auto 0;
+    }
+    .feature-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: 40px; border-radius: var(--radius-lg); transition: var(--transition);
+    }
+    .feature-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+    .feat-icon {
+      width: 48px; height: 48px; border-radius: 12px; background: var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; color: var(--accent); margin-bottom: 24px;
+    }
+    
+    .footer {
+      padding: 60px 5%; border-top: 1px solid var(--border); text-align: center;
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-  <div id="toast-container" class="toast-container"></div>
+  <header>
+    <nav class="landing-nav">
+      <div class="navbar-brand"><i class="fa-solid fa-bolt-lightning"></i> TaskFlow</div>
+      <div class="hero-actions">
+        <a href="auth.html" class="btn btn-ghost">Sign In</a>
+        <a href="auth.html?tab=signup" class="btn btn-primary">Get Started</a>
+      </div>
+    </nav>
+  </header>
 
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-logo">⚡ TaskFlow</div>
-      <p class="auth-subtitle">Team Task Management, Simplified</p>
+  <main>
+    <section class="hero">
+      <div class="hero-tag">New: Global Admin Control v2.0</div>
+      <h1 class="hero-h1">The modern way to <br/> collaborate on tasks.</h1>
+      <p class="hero-p">
+        TaskFlow combines simplicity with powerful collaboration tools. 
+        Manage projects, track tasks, and empower your team to achieve more together.
+      </p>
+      <div class="hero-actions">
+        <a href="auth.html?tab=signup" class="btn btn-primary" style="padding: 14px 32px; font-size: 1rem;">
+          Try TaskFlow for Free
+        </a>
+        <a href="#features" class="btn btn-ghost" style="padding: 14px 32px; font-size: 1rem;">
+          Explore Features
+        </a>
+      </div>
+    </section>
 
-      <!-- Tabs -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
-        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+    <section class="features" id="features">
+      <div style="text-align:center; max-width: 700px; margin: 0 auto;">
+        <h2 style="font-size: 2.25rem; font-weight: 800; letter-spacing: -1px;">Everything you need to ship faster.</h2>
+        <p style="color:var(--text-secondary); margin-top:12px;">Simple, effective, and beautifully designed for high-performance teams.</p>
       </div>
 
-      <!-- Login Form -->
-      <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required/>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feat-icon"><i class="fa fa-layer-group"></i></div>
+          <h3 style="margin-bottom:12px; font-size:1.25rem;">Kanban Board</h3>
+          <p style="color:var(--text-secondary); line-height:1.6;">Visualize your workflow and move tasks from To-Do to Done with intuitive drag-and-drop actions.</p>
         </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required/>
+        <div class="feature-card">
+          <div class="feat-icon"><i class="fa fa-users"></i></div>
+          <h3 style="margin-bottom:12px; font-size:1.25rem;">Team Management</h3>
+          <p style="color:var(--text-secondary); line-height:1.6;">Add members to projects, assign roles, and keep everyone aligned on the same goals.</p>
         </div>
-        <button type="submit" class="btn btn-primary w-full" id="login-btn">
-          <i class="fa fa-arrow-right-to-bracket"></i> Sign In
-        </button>
-        <p class="text-sm text-muted" style="text-align:center">
-          Don't have an account?
-          <a href="#" onclick="switchTab('signup')" style="color:var(--accent-light)">Sign up</a>
-        </p>
-      </form>
+        <div class="feature-card">
+          <div class="feat-icon"><i class="fa fa-chart-line"></i></div>
+          <h3 style="margin-bottom:12px; font-size:1.25rem;">Live Statistics</h3>
+          <p style="color:var(--text-secondary); line-height:1.6;">Get a high-level view of your team's progress with real-time dashboard analytics and status charts.</p>
+        </div>
+      </div>
+    </section>
+  </main>
 
-      <!-- Signup Form -->
-      <form id="signup-form" class="auth-form hidden" onsubmit="handleSignup(event)">
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <input type="text" id="signup-name" class="form-input" placeholder="John Doe" required/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" required/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password <span class="text-muted">(min 6 chars)</span></label>
-          <input type="password" id="signup-password" class="form-input" placeholder="••••••••" required minlength="6"/>
-        </div>
-        <button type="submit" class="btn btn-primary w-full" id="signup-btn">
-          <i class="fa fa-user-plus"></i> Create Account
-        </button>
-        <p class="text-sm text-muted" style="text-align:center">
-          Already have an account?
-          <a href="#" onclick="switchTab('login')" style="color:var(--accent-light)">Sign in</a>
-        </p>
-      </form>
+  <footer class="footer">
+    <div style="margin-bottom:20px;">
+      <i class="fa-solid fa-bolt-lightning"></i> <strong>TaskFlow</strong>
     </div>
-  </div>
-
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/auth.js"></script>
+    <p>&copy; 2026 TaskFlow. All rights reserved.</p>
+  </footer>
 </body>
 </html>

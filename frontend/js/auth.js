@@ -36,9 +36,10 @@ async function handleSignup(e) {
   const name     = document.getElementById('signup-name').value.trim();
   const email    = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
+  const role     = document.getElementById('signup-role').value;
   setLoading('signup-btn', true, '<i class="fa fa-user-plus"></i> Create Account');
   try {
-    const data = await api.signup({ name, email, password });
+    const data = await api.signup({ name, email, password, role });
     localStorage.setItem('tf_token', data.token);
     localStorage.setItem('tf_user', JSON.stringify(data.user));
     showToast('Account created! Redirecting…', 'success');
@@ -48,3 +49,9 @@ async function handleSignup(e) {
     setLoading('signup-btn', false, '<i class="fa fa-user-plus"></i> Create Account');
   }
 }
+
+// Initial state based on URL
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tab') === 'signup') switchTab('signup');
+})();
