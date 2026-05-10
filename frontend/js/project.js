@@ -80,10 +80,14 @@
       col.innerHTML = colTasks.map(t => {
         const overdue = isOverdue(t.dueDate) && t.status !== 'Done';
         const assigneeName = t.assignee?.name || '';
+        const tAssigneeId = t.assignee?._id || t.assignee;
+        const canDrag = isAdminUser || (tAssigneeId === user?._id);
+
         return `
-        <div class="task-card" draggable="true"
+        <div class="task-card" draggable="${canDrag}"
           data-id="${t._id}"
-          ondragstart="onDragStart(event, '${t._id}')"
+          style="${!canDrag ? 'cursor: default; opacity: 0.8;' : ''}"
+          ondragstart="${canDrag ? `onDragStart(event, '${t._id}')` : 'event.preventDefault()'}"
           ondragend="onDragEnd(event)">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
             <div class="task-title">${esc(t.title)}</div>
@@ -126,6 +130,15 @@
     if (!draggedTaskId) return;
     const task = tasks.find(t => t._id === draggedTaskId);
     if (!task || task.status === newStatus) { draggedTaskId = null; return; }
+
+    // Safety check for members
+    const tAssigneeId = task.assignee?._id || task.assignee;
+    if (!isAdminUser && tAssigneeId !== user?._id) {
+      showToast('You can only move tasks assigned to you', 'error');
+      draggedTaskId = null;
+      return;
+    }
+
     try {
       await api.updateTask(draggedTaskId, { status: newStatus });
       task.status = newStatus;
@@ -249,6 +262,7 @@
         <div style="display:flex;align-items:center;gap:6px">
           <span class="member-role-pill ${m.role}">${m.role}</span>
           ${isAdminUser ? `
+            <button class="task-btn" onclick="quickAssign('${mu._id}')" title="Assign Task to ${esc(mu.name)}"><i class="fa fa-plus-square"></i></button>
             <button class="task-btn" onclick="openEditMember('${mu._id}')" title="Edit Member"><i class="fa fa-pencil"></i></button>
             ${mu._id !== (project.admin._id || project.admin) ? `
               <button class="task-btn delete-btn" onclick="handleRemoveMember('${mu._id}')" title="Remove"><i class="fa fa-xmark"></i></button>
@@ -258,6 +272,11 @@
       </div>`;
     }).join('');
   }
+
+  window.quickAssign = (userId) => {
+    openCreateTaskModal();
+    document.getElementById('task-assignee').value = userId;
+  };
 
   function populateAssigneeSelect() {
     const sel = document.getElementById('task-assignee');

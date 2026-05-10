@@ -4,12 +4,21 @@ const { protect } = require('../middleware/auth');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 
-const isAdmin = (project, user) =>
-  user.role === 'admin' || project.admin.toString() === user._id.toString();
+// Helper to get ID string regardless of population
+const getUserId = (u) => (u && u._id ? u._id.toString() : (u ? u.toString() : null));
+
+const isAdmin = (project, user) => {
+  if (user.role === 'admin') return true;
+  const uId = getUserId(user);
+  if (project.admin && getUserId(project.admin) === uId) return true;
+  const member = project.members.find((m) => getUserId(m.user) === uId);
+  return member && member.role === 'Admin';
+};
 
 const isMember = (project, user) => {
   if (isAdmin(project, user)) return true;
-  return project.members.some((m) => m.user.toString() === user._id.toString());
+  const uId = getUserId(user);
+  return project.members.some((m) => getUserId(m.user) === uId);
 };
 
 // @route GET /api/projects/:id/tasks
@@ -67,10 +76,16 @@ router.patch('/:taskId', protect, async (req, res) => {
 
     const adminUser = isAdmin(project, req.user);
 
-    // Members can only update status
+    // Members check
     if (!adminUser) {
+      // 1. Members can only update status
       if (Object.keys(req.body).some((k) => k !== 'status')) {
         return res.status(403).json({ message: 'Members can only update status' });
+      }
+      // 2. Members can only update their own assigned tasks
+      const isAssignee = task.assignee && getUserId(task.assignee) === getUserId(req.user);
+      if (!isAssignee) {
+        return res.status(403).json({ message: 'You can only update tasks assigned to you' });
       }
     }
 

@@ -72,3 +72,48 @@ function esc(str) {
   d.textContent = str || '';
   return d.innerHTML;
 }
+window.toggleAvatarDropdown = () => {
+  const dd = document.getElementById('avatar-dropdown');
+  if (dd) dd.classList.toggle('hidden');
+};
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+  const container = document.querySelector('.avatar-dropdown-container');
+  const dropdown = document.getElementById('avatar-dropdown');
+  if (container && !container.contains(e.target) && dropdown) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+// Profile logic (shared)
+window.openProfileModal = () => {
+  const dd = document.getElementById('avatar-dropdown');
+  if (dd) dd.classList.add('hidden'); // Close dropdown
+  
+  const user = JSON.parse(localStorage.getItem('tf_user') || '{}');
+  if (!user.name) return;
+  document.getElementById('profile-name').value = user.name;
+  document.getElementById('profile-email').value = user.email || '';
+  openModal('profile-modal');
+};
+
+window.handleUpdateProfile = async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('profile-name').value.trim();
+  const user = JSON.parse(localStorage.getItem('tf_user') || '{}');
+  if (!name || name === user.name) { closeModal('profile-modal'); return; }
+
+  setLoading('update-profile-btn', true, '<i class="fa fa-floppy-disk"></i> Updating...');
+  try {
+    const res = await api.updateUser(user._id, { name });
+    localStorage.setItem('tf_user', JSON.stringify(res.user));
+    setNavUser(res.user);
+    showToast('Name updated successfully!', 'success');
+    closeModal('profile-modal');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    setLoading('update-profile-btn', false, '<i class="fa fa-floppy-disk"></i> Update Name');
+  }
+};

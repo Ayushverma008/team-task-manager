@@ -129,7 +129,7 @@
     document.getElementById('stat-overdue').textContent   = overdue;
 
     drawStatusChart(todo, inProgress, done);
-    drawUserChart(perUser);
+    drawWaveChart(perUser);
   }
 
   // ---- All Tasks View ----
@@ -150,15 +150,20 @@
       container.innerHTML = mine.map(t => {
         const overdue = isOverdue(t.dueDate) && t.status !== 'Done';
         return `
-        <div class="card" style="margin-bottom:12px;padding:16px">
+        <div class="card task-item" style="margin-bottom:12px;padding:16px" data-task-id="${t._id}">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div style="flex:1">
               <div style="font-weight:600;margin-bottom:4px">${esc(t.title)}</div>
               <div style="font-size:0.8rem;color:var(--text-muted)">${esc(t.projectTitle)}</div>
             </div>
-            <span class="badge badge-${t.status === 'Todo' ? 'todo' : t.status === 'InProgress' ? 'inprogress' : 'done'}">${t.status}</span>
+            <span class="badge badge-${t.status.toLowerCase()}">${t.status}</span>
             <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
             ${t.dueDate ? `<span style="font-size:0.78rem;color:${overdue ? '#f87171' : 'var(--text-muted)'}"><i class="fa fa-calendar${overdue?' fa-beat':''}" style="margin-right:4px"></i>${formatDate(t.dueDate)}</span>` : ''}
+          </div>
+          <div class="task-status-actions">
+            <button class="status-btn todo ${t.status==='Todo'?'active':''}" onclick="updateTaskStatus('${t._id}', 'Todo')">Todo</button>
+            <button class="status-btn inprogress ${t.status==='InProgress'?'active':''}" onclick="updateTaskStatus('${t._id}', 'InProgress')">In Progress</button>
+            <button class="status-btn done ${t.status==='Done'?'active':''}" onclick="updateTaskStatus('${t._id}', 'Done')">Done</button>
           </div>
         </div>`;
       }).join('');
@@ -167,82 +172,99 @@
     }
   }
 
-  // ---- Chart: Status Distribution ----
+  window.updateTaskStatus = async (taskId, newStatus) => {
+    try {
+      await api.updateTask(taskId, { status: newStatus });
+      showToast(`Task status updated to ${newStatus}`, 'success');
+      await loadProjects(); // Refresh stats and charts
+      if (currentView === 'allTasks') await loadAllTasks();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  let statusChartInstance = null;
+  let waveChartInstance = null;
+
+  // ---- Chart: Status Distribution (Chart.js) ----
   function drawStatusChart(todo, inProgress, done) {
-    const canvas = document.getElementById('status-chart');
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 140;
-    const total = todo + inProgress + done || 1;
-    const data = [
-      { label: 'To Do',       value: todo,       color: '#64748b' },
-      { label: 'In Progress', value: inProgress, color: '#3b82f6' },
-      { label: 'Done',        value: done,        color: '#10b981' },
-    ];
-    // Bar chart
-    const barW = 48; const gap = 24;
-    const maxVal = Math.max(...data.map(d => d.value), 1);
-    const chartH = 90; const startY = 10;
-    const totalW = data.length * (barW + gap) - gap;
-    let x = (canvas.width - totalW) / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    data.forEach(d => {
-      const bh = (d.value / maxVal) * chartH;
-      const y = startY + chartH - bh;
-      const gradient = ctx.createLinearGradient(0, y, 0, y + bh);
-      gradient.addColorStop(0, d.color);
-      gradient.addColorStop(1, d.color + '55');
-      ctx.beginPath();
-      ctx.roundRect(x, y, barW, bh, [4, 4, 0, 0]);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      ctx.fillStyle = '#f1f5f9';
-      ctx.font = 'bold 13px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(d.value, x + barW / 2, y - 6);
-      ctx.fillStyle = '#64748b';
-      ctx.font = '11px Inter, sans-serif';
-      ctx.fillText(d.label, x + barW / 2, startY + chartH + 16);
-      x += barW + gap;
+    const ctx = document.getElementById('status-chart').getContext('2d');
+    if (statusChartInstance) statusChartInstance.destroy();
+
+    statusChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['To Do', 'In Progress', 'Done'],
+        datasets: [{
+          data: [todo, inProgress, done],
+          backgroundColor: ['#64748b', '#3b82f6', '#10b981'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 6, font: { family: 'Inter', size: 10 } } }
+        },
+        cutout: '65%'
+      }
     });
   }
 
-  // ---- Chart: Tasks per User ----
-  function drawUserChart(perUser) {
-    const canvas = document.getElementById('user-chart');
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 140;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const entries = Object.entries(perUser);
-    if (!entries.length) {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '13px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('No assigned tasks yet', canvas.width / 2, 70);
-      return;
-    }
-    const maxVal = Math.max(...entries.map(e => e[1]), 1);
-    const rowH = 28; const barMaxW = canvas.width - 120; const startX = 80;
-    entries.slice(0, 4).forEach(([name, count], i) => {
-      const y = 16 + i * rowH;
-      const bw = (count / maxVal) * barMaxW;
-      const colors = ['#6366f1', '#3b82f6', '#10b981', '#f59e0b'];
-      ctx.fillStyle = '#64748b';
-      ctx.font = '11px Inter, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(name.split(' ')[0], startX - 8, y + 14);
-      const gradient = ctx.createLinearGradient(startX, 0, startX + bw, 0);
-      gradient.addColorStop(0, colors[i % colors.length]);
-      gradient.addColorStop(1, colors[i % colors.length] + '66');
-      ctx.beginPath();
-      ctx.roundRect(startX, y, bw, 18, 4);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      ctx.fillStyle = '#f1f5f9';
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(count, startX + bw + 6, y + 13);
+  // ---- Chart: Team Progress Wave (Chart.js Area Chart) ----
+  function drawWaveChart(perUser) {
+    const ctx = document.getElementById('wave-chart').getContext('2d');
+    if (waveChartInstance) waveChartInstance.destroy();
+
+    const entries = Object.entries(perUser).filter(e => e[1] > 0); // Only show active contributors
+    const labels = entries.map(e => e[0].split(' ')[0]);
+    const values = entries.map(e => e[1]);
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 140);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+    waveChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels.length ? labels : ['No Activity'],
+        datasets: [{
+          label: 'In Progress Tasks',
+          data: values.length ? values : [0],
+          borderColor: '#3b82f6',
+          borderWidth: 3,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true, 
+            grid: { color: 'rgba(255,255,255,0.05)' }, 
+            ticks: { stepSize: 1, font: { family: 'Inter', size: 10 } } 
+          },
+          x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleFont: { family: 'Inter' },
+            bodyFont: { family: 'Inter' },
+            padding: 10,
+            cornerRadius: 8
+          }
+        }
+      }
     });
   }
 
